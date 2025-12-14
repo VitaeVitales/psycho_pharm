@@ -1,0 +1,104 @@
+<section id="adminScreen">
+  <div class="top-bar">
+    <button id="backToLoginFromAdmin" class="secondary-btn">&larr; Назад</button>
+    <span class="top-bar-title">Настройки диктанта</span>
+  </div>
+
+  <!-- Список препаратов -->
+  <div class="card">
+    <h2>Список препаратов</h2>
+    <p class="hint">
+      Введите 1–10 препаратов, по одному в строке. <strong>Только русский текст</strong>.
+      Это будут «названия из диктовки» у ординаторов.
+      <br />
+      Важно: эти строки должны находиться в мастер-таблице в колонках <code>inn_ru</code> или <code>trade_names_ru</code>,
+      иначе сохранить настройки не получится.
+    </p>
+    <textarea id="adminDrugs" rows="10"></textarea>
+  </div>
+
+  <!-- Время и код -->
+  <div class="card">
+    <h2>Время диктанта и код</h2>
+    <div class="form-row inline">
+      <label>Длительность диктанта (мин)
+        <input type="number" id="adminDuration" min="1" step="1" />
+      </label>
+      <label>Код начала диктанта
+        <input type="text" id="adminAccessCode" />
+      </label>
+    </div>
+    <div class="hint">
+      Код должен совпадать с тем словом/фразой, которое вы сообщите ординаторам перед началом.
+    </div>
+
+    <div class="form-row">
+      <button id="adminSaveBtn" class="primary-btn">Сохранить настройки</button>
+      <span id="adminSaveStatus" class="status-text"></span>
+    </div>
+
+    <!-- НОВОЕ: подробные ошибки -->
+    <div id="adminSaveError" class="status-text hidden" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- Дополнительные настройки -->
+  <div class="card">
+    <h2>Дополнительные настройки</h2>
+    <div class="form-row">
+      <label>Название диктанта
+        <input type="text" id="adminSessionName" />
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Ключ для показаний
+        <select id="adminIndicationKey">
+          <option value="general">Общий список</option>
+          <option value="antidepressants">Антидепрессанты</option>
+          <option value="neuroleptics">Нейролептики</option>
+          <option value="normotimics">Нормотимики</option>
+          <option value="benzodiazepines">Бензодиазепины</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>Загрузить показания из файла
+        <input type="file" id="adminIndicationsFile" accept=".json" />
+      </label>
+      <button type="button" id="adminUploadIndicationsBtn" class="secondary-btn">Загрузить</button>
+    </div>
+    <div class="hint">
+      Формат файла: JSON с объектом, где ключи – категории, а значения – массивы показаний.
+      При загрузке текущие показания будут заменены.
+    </div>
+    <div id="adminUploadStatus" class="status-text"></div>
+
+    <!-- Загрузка мастер-таблицы (ключа) -->
+    <div class="form-row" style="margin-top:10px;">
+      <label>Загрузить мастер-таблицу (ключ)
+        <input type="file" id="adminAnswerKeyFile" accept=".xlsx,.xls" />
+      </label>
+      <button type="button" id="adminUploadAnswerKeyBtn" class="secondary-btn">Загрузить</button>
+    </div>
+    <div class="hint">
+      Загружается Excel мастер-таблица с колонками (минимум): <code>drug_id</code>, <code>inn_main</code>, <code>trade_names</code>,
+      формы <code>form_*</code>, и обязательно <code>inn_ru</code>, <code>trade_names_ru</code> для сопоставления списка диктовки.
+    </div>
+    <div id="adminAnswerKeyStatus" class="status-text"></div>
+  </div>
+
+  <!-- История -->
+  <div id="historySection" class="card">
+    <h2>История диктантов</h2>
+    <div id="historyContent"></div>
+    <div class="form-row" style="margin-top:10px;">
+      <button type="button" id="adminExportResultsBtn" class="secondary-btn">
+        Экспорт результатов (CSV)
+      </button>
+      <button type="button" id="adminExportResultsXlsxBtn" class="secondary-btn">
+        Экспорт результатов (Excel)
+      </button>
+    </div>
+  </div>
+</section>
+

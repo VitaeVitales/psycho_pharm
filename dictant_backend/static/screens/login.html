@@ -1,0 +1,45 @@
+<section id="loginScreen" class="screen active-screen">
+  <h1 class="app-title">Психофармакологический диктант</h1>
+  <div class="card">
+    <!-- Переключатель роли -->
+    <div class="role-switch">
+      <button class="role-button active" data-role="student">Ординатор</button>
+      <button class="role-button" data-role="admin">Администратор</button>
+    </div>
+    <!-- Форма входа ординатора -->
+    <form id="studentLoginForm" class="login-form">
+  <div class="form-row">
+    <label>ФИО
+      <input type="text" id="studentName" />
+    </label>
+  </div>
+  <div class="form-row">
+    <label>Группа / Курс
+      <input type="text" id="studentGroup" />
+    </label>
+  </div>
+  <div class="form-row">
+    <label>Код теста
+      <input type="text" id="studentAccessCode" />
+    </label>
+  </div>
+  <button id="startButton" type="submit">Начать диктант</button>
+</form>
+
+<div id="studentError" class="error-message"></div>
+    <!-- Форма входа администратора -->
+    <form id="adminLoginForm" class="login-form hidden">
+      <div class="form-row">
+        <label>Пароль администратора
+          <input type="password" id="adminPassword" required />
+        </label>
+      </div>
+      <div class="form-row">
+        <button type="submit" class="primary-btn">Войти в админку</button>
+      </div>
+      <div id="adminLoginError" class="error-text"></div>
+    </form>
+  </div>
+</section>
+
+

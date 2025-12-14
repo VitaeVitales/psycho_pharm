@@ -1,0 +1,282 @@
+<section id="examScreen">
+  <div class="top-bar">
+    <div class="exam-info">
+      <div id="studentInfo"></div>
+      <div class="timer-block">Время: <span id="timerDisplay">00:00</span></div>
+    </div>
+    <div class="warnings-block">
+      <span id="warningsSummary">Предупреждения: 0 (бездействие 0, вкладки 0)</span>
+    </div>
+  </div>
+
+  <!-- Навигация по препаратам -->
+  <div class="card">
+    <h2>Навигация по препаратам</h2>
+    <div id="drugTabs" class="drug-tabs"></div>
+    <div class="hint">Нажимайте на номер препарата, чтобы перейти к его заполнению.</div>
+  </div>
+
+  <!-- Контейнер для блоков препаратов -->
+  <div class="card">
+    <div id="drugBlocks"></div>
+  </div>
+
+  <!-- Кнопка отправки -->
+  <div class="card bottom-actions">
+    <button id="manualSubmitBtn" class="primary-btn">Отправить ответы</button>
+    <div id="submitStatus" class="status-text"></div>
+  </div>
+</section>
+
+<!-- Модальные окна -->
+<!-- Предупреждение (античит) -->
+<div id="warningModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Внимание</h2>
+    <p id="warningMainText">Вы ещё здесь? Выполните взаимодействие со страницей.</p>
+    <p id="warningSecondaryText" class="warning-secondary">
+      ВНИМАНИЕ! 3 предупреждения приводят к завершению диктанта.
+    </p>
+    <p id="warningCountersText" class="warning-counters"></p>
+    <button id="warningConfirmBtn" class="primary-btn">Я здесь</button>
+  </div>
+</div>
+
+<!-- Подтверждение отправки -->
+<div id="submitConfirmModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Подтверждение отправки</h2>
+    <p id="submitConfirmText">
+      Вы уверены, что хотите отправить ответы? После отправки диктант будет завершён.
+    </p>
+    <div class="modal-actions">
+      <button id="submitConfirmYes" class="primary-btn">Отправить</button>
+      <button id="submitConfirmNo" class="secondary-btn">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Завершение диктанта -->
+<div id="submitCompleteModal" class="modal hidden">
+  <div class="modal-content">
+    <h2 id="submitCompleteTitle">Диктант завершён</h2>
+    <p id="submitCompleteText">Ваши ответы отправлены. Спасибо!</p>
+    <button id="submitCompleteCloseBtn" class="primary-btn">Закрыть</button>
+  </div>
+</div>
+
+<!-- Шаблон блока препарата -->
+<template id="drugTemplate">
+  <div class="drug-block">
+    <h2>Препарат <span class="drug-number"></span></h2>
+    <p class="dictated-line">
+      Название из диктовки: <span class="dictated-name-text"></span>
+    </p>
+
+    <!-- МНН и торговые -->
+    <div class="field-group">
+      <h3>МНН и торговые названия</h3>
+      <p class="hint">
+        Определите, что именно вам продиктовали, и заполните оба поля.
+        МНН и торговые названия пишите латиницей.
+      </p>
+      <div class="inline-radio" data-role="dictated-type">
+        <label><input type="radio" value="mnn" /> Продиктовано МНН</label>
+        <label><input type="radio" value="trade" /> Продиктовано торговое название</label>
+      </div>
+      <label>МНН
+        <textarea data-role="mnn" rows="2" placeholder="Например: Olanzapinum"></textarea>
+      </label>
+      <label>Торговые названия (через запятую)
+        <textarea data-role="trade-names" rows="2" placeholder="Например: Zyprexa, Zalasta, Egolanza"></textarea>
+      </label>
+    </div>
+
+    <!-- Формы выпуска -->
+    <div class="field-group">
+      <h3>Формы выпуска</h3>
+      <p class="hint">
+        Отметьте все формы выпуска препарата. Некоторые варианты могут быть «обманками».
+      </p>
+      <div class="checkbox-grid" data-role="forms">
+        <label><input type="checkbox" value="tablets" /> таблетки</label>
+        <label><input type="checkbox" value="capsules" /> капсулы</label>
+        <label><input type="checkbox" value="ointment" /> мазь</label>
+        <label><input type="checkbox" value="gel" /> гель</label>
+        <label><input type="checkbox" value="ampoules" /> ампулы</label>
+        <label><input type="checkbox" value="drops" /> флакон (капли)</label>
+        <label><input type="checkbox" value="powder" /> порошок (суспензия)</label>
+        <label><input type="checkbox" value="dragee" /> драже</label>
+        <label><input type="checkbox" value="spray" /> спрей / аэрозоль</label>
+        <label><input type="checkbox" value="patch" /> трансдермальный пластырь</label>
+      </div>
+    </div>
+
+    <!-- Дозировки форм выпуска (появляются после выбора форм) -->
+    <div class="field-group hidden" data-role="form-dosages-group">
+      <h3>Дозировки форм выпуска</h3>
+      <p class="hint">
+        После того как отметили формы выпуска, появятся варианты дозировок.
+        Выберите все дозировки, которые реально существуют для каждой выбранной формы.
+      </p>
+      <div data-role="form-dosage-panels"></div>
+    </div>
+
+    <!-- Дозировки по формам (НОВОЕ) -->
+    <div class="field-group hidden" data-role="dosages-group">
+      <h3>Дозировки выпускаемых форм</h3>
+      <p class="hint">
+        После выбора форм выпуска отметьте дозировки для каждой выбранной формы.
+        Для твёрдых и жидких форм используются разные списки, чтобы не было подсказок.
+      </p>
+      <div data-role="dosages-container"></div>
+    </div>
+
+
+    <!-- Дозировки выпускаемых форм -->
+    <div class="field-group" data-role="form-dosages-group">
+      <h3>Дозировки выпускаемых форм</h3>
+      <p class="hint">
+        Сначала отметьте формы выпуска выше. Затем выберите все имеющиеся дозировки для каждой выбранной формы.
+      </p>
+      <div data-role="form-dosages"></div>
+    </div>
+
+    <!-- Показания -->
+    <div class="field-group">
+      <h3>Показания</h3>
+      <p class="hint">
+        Отметьте все показания, для которых данный препарат действительно используется.
+        Варианты представлены общим списком.
+      </p>
+      <div class="checkbox-grid" data-role="indications"></div>
+    </div>
+
+    <!-- Дозы -->
+    <div class="field-group">
+      <h3>Суточные дозы</h3>
+      <p class="hint">Пишите только целые числа, без единиц измерения.</p>
+
+      <!-- Минимальная -->
+      <div class="dose-row" data-role="dose-block" data-dose-type="min">
+        <div class="dose-main">
+          <label>Минимальная суточная доза
+            <input type="number" step="1" min="0" data-role="dose-main-value" inputmode="numeric" />
+          </label>
+          <button type="button" class="secondary-btn small" data-role="dose-extra-toggle">
+            Дополнение
+          </button>
+        </div>
+        <div class="dose-extra-panel hidden" data-role="dose-extra-panel">
+          <p class="hint">Отметьте нужные уточнения и укажите число.</p>
+          <div class="dose-extra-grid">
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="adults" /> взрослые</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="children" /> дети</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="outpatient" /> амбулаторно</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="inpatient" /> стационарно</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Средняя -->
+      <div class="dose-row" data-role="dose-block" data-dose-type="avg">
+        <div class="dose-main">
+          <label>Средняя суточная доза
+            <input type="number" step="1" min="0" data-role="dose-main-value" inputmode="numeric" />
+          </label>
+          <button type="button" class="secondary-btn small" data-role="dose-extra-toggle">
+            Дополнение
+          </button>
+        </div>
+        <div class="dose-extra-panel hidden" data-role="dose-extra-panel">
+          <p class="hint">Отметьте нужные уточнения и укажите число.</p>
+          <div class="dose-extra-grid">
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="adults" /> взрослые</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="children" /> дети</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="outpatient" /> амбулаторно</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="inpatient" /> стационарно</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Максимальная -->
+      <div class="dose-row" data-role="dose-block" data-dose-type="max">
+        <div class="dose-main">
+          <label>Максимальная суточная доза
+            <input type="number" step="1" min="0" data-role="dose-main-value" inputmode="numeric" />
+          </label>
+          <button type="button" class="secondary-btn small" data-role="dose-extra-toggle">
+            Дополнение
+          </button>
+        </div>
+        <div class="dose-extra-panel hidden" data-role="dose-extra-panel">
+          <p class="hint">Отметьте нужные уточнения и укажите число.</p>
+          <div class="dose-extra-grid">
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="adults" /> взрослые</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="children" /> дети</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="outpatient" /> амбулаторно</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+            <div class="dose-extra-item">
+              <label><input type="checkbox" data-role="dose-extra-checkbox" value="inpatient" /> стационарно</label>
+              <input type="number" step="1" min="0" class="hidden" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Фармакокинетика -->
+    <div class="field-group">
+      <h3>Фармакокинетика</h3>
+      <p class="hint">
+        Период полувыведения пишите только целое число (в часах), без единиц измерения.
+      </p>
+      <div data-role="half-life" class="form-row inline">
+        <label>Период полувыведения от
+          <input type="number" step="1" min="0" />
+        </label>
+        <label>до
+          <input type="number" step="1" min="0" />
+        </label>
+      </div>
+      <p class="hint" style="margin-top:4px;">Пути выведения: отметьте все верные варианты.</p>
+      <div class="checkbox-grid" data-role="elimination">
+        <label><input type="checkbox" value="kidney" /> почки</label>
+        <label><input type="checkbox" value="intestine" /> кишечник</label>
+        <label><input type="checkbox" value="liver" /> печень</label>
+      </div>
+    </div>
+  </div>
+</template>

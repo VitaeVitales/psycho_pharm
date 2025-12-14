@@ -1,0 +1,18 @@
+flask==3.0.0
+flask_sqlalchemy==3.1.1
+flask_cors==4.0.0
+flask_socketio==5.3.6
+
+# socket.io backend — обязательно, иначе WS не запустятся
+python-socketio==5.8.0
+python-engineio==4.8.0
+eventlet==0.33.3
+
+# Excel support
+pandas==2.2.0
+openpyxl==3.1.2
+
+# For parsing XLS/XLSX in admin panel
+xlrd==2.0.1
+
+

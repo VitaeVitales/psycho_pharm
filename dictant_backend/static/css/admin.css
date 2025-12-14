@@ -1,0 +1,18 @@
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.history-table th,
+.history-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-table th {
+  text-align: left;
+  background: #f9fafb;
+  font-weight: 600;
+}
+

@@ -1,0 +1,47 @@
+.screen {
+  display: block;
+}
+
+.active-screen {
+  display: block;
+}
+
+.role-switch {
+  display: flex;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  padding: 2px;
+  background: #e5e7eb;
+}
+
+.role-button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.role-button.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.login-form .form-row {
+  margin-bottom: 12px;
+}
+
+input.invalid {
+  border: 2px solid #ff4d4d;
+  background: #fff5f5;
+}
+
+.error-message {
+  margin-top: 8px;
+  color: #ff3333;
+  font-size: 14px;
+  min-height: 20px;
+}
+
