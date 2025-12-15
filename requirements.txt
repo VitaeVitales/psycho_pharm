@@ -14,5 +14,6 @@ openpyxl==3.1.2
 
 # For parsing XLS/XLSX in admin panel
 xlrd==2.0.1
+XlsxWriter
 
 
