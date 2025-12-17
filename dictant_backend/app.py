@@ -12,6 +12,7 @@ def create_app():
     socketio.init_app(app)
 
     with app.app_context():
+        from . import models  # важно: зарегистрировать ВСЕ модели перед create_all()
         db.create_all()
 
     # Register Blueprints
