@@ -6,6 +6,9 @@ from ..models import Settings
 from ..extensions import db, socketio
 from . import admin_bp
 
+from ..models import ExamSession, SessionRoster
+from ..utils.ident import normalize_name, generate_join_code
+
 
 _CYR_RE = re.compile(r"[А-Яа-яЁё]")
 
@@ -196,4 +199,90 @@ def save_settings():
     socketio.emit("settings_updated", payload, room=room) if room else socketio.emit("settings_updated", payload)
 
     return jsonify({"status": "ok"})
+
+@admin_bp.route("/exam_sessions", methods=["POST"])
+def create_exam_session():
+    data = request.get_json(silent=True) or {}
+
+    session_name = data.get("session_name", "").strip()
+    if not session_name:
+        return jsonify({"error": "session_name is required"}), 400
+
+    join_code = data.get("join_code") or generate_join_code()
+
+    session = ExamSession(
+        session_name=session_name,
+        join_code=join_code,
+        is_open=True,
+    )
+
+    try:
+        db.session.add(session)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to create session", "details": str(e)}), 400
+
+    return jsonify({
+        "id": session.id,
+        "session_name": session.session_name,
+        "join_code": session.join_code,
+        "is_open": session.is_open,
+    })
+@admin_bp.route("/exam_sessions", methods=["GET"])
+
+
+
+def list_exam_sessions():
+    sessions = ExamSession.query.order_by(ExamSession.created_at.desc()).all()
+    return jsonify([
+        {
+            "id": s.id,
+            "session_name": s.session_name,
+            "join_code": s.join_code,
+            "is_open": s.is_open,
+            "created_at": s.created_at.isoformat(),
+        }
+        for s in sessions
+    ])
+@admin_bp.route("/exam_sessions/<int:session_id>/roster", methods=["POST"])
+def upload_session_roster(session_id: int):
+    session = ExamSession.query.get(session_id)
+    if session is None:
+        return jsonify({"error": "Session not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    names = data.get("names")
+
+    if not isinstance(names, list) or not names:
+        return jsonify({"error": "names must be a non-empty list"}), 400
+
+    # очищаем старый roster
+    SessionRoster.query.filter_by(session_id=session.id).delete()
+
+    added = 0
+    for raw in names:
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+
+        key = normalize_name(raw)
+
+        db.session.add(SessionRoster(
+            session_id=session.id,
+            full_name_raw=raw.strip(),
+            full_name_key=key,
+        ))
+        added += 1
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to save roster", "details": str(e)}), 400
+
+    return jsonify({
+        "session_id": session.id,
+        "added": added,
+    })
+
 
