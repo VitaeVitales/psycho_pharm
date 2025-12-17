@@ -1,6 +1,21 @@
+# виртуальное окружение
+venv/
+.env/
+
+# python cache
 __pycache__/
 *.pyc
-.env
-venv/
+
+# база данных
 instance/
+*.db
+
+# IDE / OS
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
+
+# логи
+*.log
+config.diagnose
