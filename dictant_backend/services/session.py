@@ -6,7 +6,9 @@ from typing import List, Optional
 
 from flask_socketio import SocketIO
 
-from ..models import db, Settings, ActiveSession, Submission
+from ..models import db, Settings, ActiveSession, Submission, ExamSession, SessionRoster
+from ..utils.ident import normalize_name
+
 
 
 # ---------------------------
@@ -32,23 +34,48 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
     Старт диктанта студентом.
     Возвращает ticket (уже перемешанный под конкретного студента).
     """
-    code = (data.get("code") or "").strip()
+    join_code = (data.get("code") or data.get("join_code") or "").strip()
+    if not join_code:
+        return {"error": "Введите код сессии"}, 400
+
+    session = ExamSession.query.filter_by(join_code=join_code).first()
+    if session is None:
+        return {"error": "Неверный код сессии"}, 400
+    if not session.is_open:
+        return {"error": "Сессия закрыта"}, 400
+
 
     settings = Settings.query.first()
-    if settings is None or (settings.code or "").strip() != code:
-        return {"error": "Неверный код"}, 400
+    if settings is None:
+        return {"error": "Настройки диктанта не заданы (admin/settings пуст) — загрузите мастер-таблицу и сохраните настройки"}, 400
+
 
     student_name = (data.get("studentName") or "").strip()
     if not student_name:
         return {"error": "Укажите ФИО"}, 400
     group = (data.get("group") or "").strip() or None
 
+    name_key = normalize_name(student_name)
+
+    # roster check
+    allowed = SessionRoster.query.filter_by(session_id=session.id, full_name_key=name_key).first()
+    if allowed is None:
+        return {"error": "ФИО не найдено в списке допущенных для этой сессии"}, 400
+
+    # single attempt per session (простая и надёжная реализация)
+    prev = Submission.query.filter_by(exam_session_id=session.id).all()
+    for sub in prev:
+        if normalize_name(sub.student_name) == name_key:
+            return {"error": "Для этой сессии попытка уже была начата/сдана"}, 400
+
+
     now = datetime.utcnow()
 
     active = ActiveSession.query.filter_by(
         student_name=student_name,
-        session_name=settings.session_name or "",
+        session_name=session.session_name,
     ).first()
+
 
     if not active:
         active = ActiveSession(
@@ -77,19 +104,20 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
             ticket = [{"drug_id": str(i), "dictated_ru": str(x), "dictated_kind": "mnn"} for i, x in enumerate(raw)]
 
     n = len(ticket)
-    seed_str = f"{settings.session_name}|{student_name}|{group}|{settings.code}|ticket_v1"
+    seed_str = f"{session.session_name}|{student_name}|{group}|{session.join_code}|ticket_v1"
     order = _stable_shuffle(n, seed_str) if n > 0 else []
     ticket_shuffled = [ticket[i] for i in order] if n > 0 else []
 
     response = {
-        "sessionName": settings.session_name,
+        "sessionName": session.session_name,
+        "examSessionId": session.id,
         "duration": settings.duration or 0,
         "indicationKey": settings.indication_key,
         "indicationSets": json.loads(settings.indication_sets) if settings.indication_sets else {},
         "ticket": ticket_shuffled,
     }
 
-    room = settings.session_name or None
+    room = session.session_name or None
     socketio.emit("active_updated", {}, room=room)
     return response, 200
 
