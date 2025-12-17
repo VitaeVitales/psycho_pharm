@@ -22,6 +22,8 @@ from datetime import datetime  # можно оставить, если где-т
 
 from .extensions import db  # <-- ключевое: используем общий db
 
+from sqlalchemy import UniqueConstraint
+
 
 class Settings(db.Model):
     """A single-row table storing the current test settings.
@@ -109,3 +111,34 @@ class ActiveSession(db.Model):
     # Можешь при желании хранить прогресс
     # например процент заполненных полей, если надо
 
+class ExamSession(db.Model):
+    __tablename__ = "exam_sessions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_name = db.Column(db.String(200), nullable=False, unique=True)
+    join_code = db.Column(db.String(32), nullable=False, unique=True)
+
+    # На этапе 1 можно оставить nullable, чтобы не зависеть от drugset-логики
+    drugset_id = db.Column(db.Integer, nullable=True)
+
+    is_open = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class SessionRoster(db.Model):
+    __tablename__ = "session_rosters"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(
+        db.Integer,
+        db.ForeignKey("exam_sessions.id"),
+        nullable=False,
+        index=True
+    )
+
+    full_name_raw = db.Column(db.String(255), nullable=False)
+    full_name_key = db.Column(db.String(255), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("session_id", "full_name_key", name="uq_roster_session_namekey"),
+    )
