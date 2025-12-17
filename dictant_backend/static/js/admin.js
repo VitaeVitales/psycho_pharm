@@ -41,6 +41,18 @@ function initAdminScreen() {
 
   const backFromAdmin = document.getElementById("backToLoginFromAdmin");
 
+  // --- Exam sessions + roster (NEW) ---
+  const examSessionNameInput = document.getElementById("examSessionNameInput");
+  const createExamSessionBtn = document.getElementById("createExamSessionBtn");
+  const examSessionsStatus = document.getElementById("examSessionsStatus");
+  const examSessionsList = document.getElementById("examSessionsList");
+
+  const rosterNamesArea = document.getElementById("rosterNamesArea");
+  const uploadRosterBtn = document.getElementById("uploadRosterBtn");
+  const rosterUploadStatus = document.getElementById("rosterUploadStatus");
+
+  let selectedExamSessionId = null;
+
   function escapeHtml(str) {
     return String(str)
       .replace(/&/g, "&amp;")
@@ -82,6 +94,7 @@ function initAdminScreen() {
 
     setSaveError("");
     renderHistory();
+    renderExamSessions();
   }
 
   backFromAdmin.addEventListener("click", () => {
@@ -354,6 +367,138 @@ function initAdminScreen() {
       if (c) c.innerHTML = '<p class="hint">Ошибка загрузки истории</p>';
     }
   }
+
+  function setExamSessionsStatus(msg) {
+    if (examSessionsStatus) examSessionsStatus.textContent = msg || "";
+    if (msg) {
+      setTimeout(() => {
+        if (examSessionsStatus) examSessionsStatus.textContent = "";
+      }, 2500);
+    }
+  }
+
+  function setRosterStatus(msg) {
+    if (rosterUploadStatus) rosterUploadStatus.textContent = msg || "";
+    if (msg) {
+      setTimeout(() => {
+        if (rosterUploadStatus) rosterUploadStatus.textContent = "";
+      }, 2500);
+    }
+  }
+
+  async function renderExamSessions() {
+    if (!examSessionsList) return;
+
+    try {
+      const resp = await fetch(`${API_BASE}/admin/exam_sessions`);
+      if (!resp.ok) throw new Error("Ошибка загрузки списка сессий");
+      const sessions = await resp.json();
+
+      if (!sessions || sessions.length === 0) {
+        examSessionsList.innerHTML = '<p class="hint">Сессий пока нет.</p>';
+        selectedExamSessionId = null;
+        return;
+      }
+
+      let html =
+        '<table class="history-table"><thead><tr><th>Название</th><th>Код</th><th>Открыта</th><th>Создана</th><th></th></tr></thead><tbody>';
+
+      sessions.forEach((s) => {
+        const created = s.created_at ? new Date(s.created_at).toLocaleString("ru-RU") : "-";
+        html += `<tr>
+          <td>${escapeHtml(s.session_name || "")}</td>
+          <td><code>${escapeHtml(s.join_code || "")}</code></td>
+          <td>${s.is_open ? "Да" : "Нет"}</td>
+          <td>${created}</td>
+          <td><button type="button" class="secondary-btn" data-session-id="${s.id}">Выбрать</button></td>
+        </tr>`;
+      });
+
+      html += "</tbody></table>";
+      examSessionsList.innerHTML = html;
+
+      examSessionsList.querySelectorAll("button[data-session-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedExamSessionId = parseInt(btn.getAttribute("data-session-id"), 10);
+          setExamSessionsStatus(`Выбрана сессия id=${selectedExamSessionId}`);
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      examSessionsList.innerHTML = '<p class="hint">Ошибка загрузки списка сессий</p>';
+    }
+  }
+
+  if (createExamSessionBtn) {
+    createExamSessionBtn.addEventListener("click", async () => {
+      const name = (examSessionNameInput?.value || "").trim();
+      if (!name) {
+        setExamSessionsStatus("Введите название сессии");
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${API_BASE}/admin/exam_sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_name: name }),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          setExamSessionsStatus(data.error || "Ошибка создания сессии");
+          return;
+        }
+
+        setExamSessionsStatus("Сессия создана");
+        if (examSessionNameInput) examSessionNameInput.value = "";
+        await renderExamSessions();
+      } catch (e) {
+        console.error(e);
+        setExamSessionsStatus("Ошибка подключения");
+      }
+    });
+  }
+
+  if (uploadRosterBtn) {
+    uploadRosterBtn.addEventListener("click", async () => {
+      if (!selectedExamSessionId) {
+        setExamSessionsStatus("Сначала выберите сессию (кнопка «Выбрать»)");
+        return;
+      }
+
+      const raw = (rosterNamesArea?.value || "").trim();
+      if (!raw) {
+        setRosterStatus("Вставьте список ФИО");
+        return;
+      }
+
+      const names = raw
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      try {
+        const resp = await fetch(`${API_BASE}/admin/exam_sessions/${selectedExamSessionId}/roster`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names }),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          setRosterStatus(data.error || "Ошибка загрузки roster");
+          return;
+        }
+
+        setRosterStatus(`Roster загружен: ${data.added ?? "?"} строк`);
+      } catch (e) {
+        console.error(e);
+        setRosterStatus("Ошибка подключения");
+      }
+    });
+  }
+
 
   // First fill
   fillAdminSettings();

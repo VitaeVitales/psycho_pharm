@@ -87,6 +87,54 @@
     <div id="adminAnswerKeyStatus" class="status-text"></div>
   </div>
 
+
+  <!-- Экзаменационные сессии -->
+<div class="card" id="examSessionsSection">
+  <h2>Экзаменационные сессии</h2>
+
+  <div class="form-row">
+    <label>Название сессии
+      <input type="text" id="examSessionNameInput" placeholder="Например: Нейролептики, декабрь" />
+    </label>
+    <button type="button" id="createExamSessionBtn" class="primary-btn">
+      Создать сессию
+    </button>
+  </div>
+
+  <div id="examSessionsStatus" class="status-text"></div>
+
+  <hr style="margin: 10px 0;" />
+
+  <h3>Существующие сессии</h3>
+  <div id="examSessionsList" class="hint">
+    Сессии ещё не созданы
+  </div>
+
+  <hr style="margin: 10px 0;" />
+
+  <h3>Roster (допущенные ординаторы)</h3>
+  <p class="hint">
+    Вставьте ФИО ординаторов, по одному в строке.
+    Ординатор сможет начать попытку только если его ФИО есть в этом списке.
+  </p>
+
+  <textarea
+    id="rosterNamesArea"
+    rows="6"
+    placeholder="Иванов Иван Иванович&#10;Петров Пётр Петрович">
+  </textarea>
+
+  <div class="form-row">
+    <button type="button" id="uploadRosterBtn" class="secondary-btn">
+      Загрузить roster в выбранную сессию
+    </button>
+  </div>
+
+  <div id="rosterUploadStatus" class="status-text"></div>
+</div>
+
+
+
   <!-- История -->
   <div id="historySection" class="card">
     <h2>История диктантов</h2>
