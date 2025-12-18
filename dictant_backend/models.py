@@ -60,6 +60,7 @@ class Submission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # Name of the session at the time of submission
     session_name = db.Column(db.String(200), nullable=True)
+    exam_session_id = db.Column(db.Integer, nullable=True, index=True)
     # Student's full name
     student_name = db.Column(db.String(200), nullable=False)
     # Student group or year of study
