@@ -88,18 +88,39 @@
   </div>
 
 
-  <!-- Экзаменационные сессии -->
+<!-- Экзаменационные сессии -->
 <div class="card" id="examSessionsSection">
   <h2>Экзаменационные сессии</h2>
 
   <div class="form-row">
     <label>Название сессии
-      <input type="text" id="examSessionNameInput" placeholder="Например: Нейролептики, декабрь" />
+      <input
+        type="text"
+        id="examSessionNameInput"
+        placeholder="Например: Нейролептики, декабрь"
+      />
     </label>
+  </div>
+
+  <div class="form-row">
+    <label>Код сессии (пароль для входа)
+      <input
+        type="text"
+        id="examSessionJoinCodeInput"
+        placeholder="Оставь пустым — будет автогенерация"
+      />
+    </label>
+  </div>
+
+  <div class="form-row">
     <button type="button" id="createExamSessionBtn" class="primary-btn">
       Создать сессию
     </button>
   </div>
+
+  <!-- дальше у тебя список сессий, roster и т.д. -->
+</div>
+
 
   <div id="examSessionsStatus" class="status-text"></div>
 

@@ -109,13 +109,16 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
     ticket_shuffled = [ticket[i] for i in order] if n > 0 else []
 
     response = {
-        "sessionName": session.session_name,
-        "examSessionId": session.id,
+        "sessionName": settings.session_name,
         "duration": settings.duration or 0,
         "indicationKey": settings.indication_key,
         "indicationSets": json.loads(settings.indication_sets) if settings.indication_sets else {},
+        # НОВОЕ: ticket — правильный формат (с drug_id / dictated_ru / dictated_kind)
         "ticket": ticket_shuffled,
+        # НОВОЕ: drugs — для обратной совместимости со старым фронтом
+        "drugs": [x.get("dictated_ru", "") for x in ticket_shuffled],
     }
+
 
     room = session.session_name or None
     socketio.emit("active_updated", {}, room=room)

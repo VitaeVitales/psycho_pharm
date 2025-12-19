@@ -116,14 +116,25 @@ class ExamSession(db.Model):
     __tablename__ = "exam_sessions"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # название сессии (уникально, чтобы можно было вести параллельно и не путаться)
     session_name = db.Column(db.String(200), nullable=False, unique=True)
+
+    # код входа (пароль для ординаторов) — либо руками, либо автогенерация
     join_code = db.Column(db.String(32), nullable=False, unique=True)
 
-    # На этапе 1 можно оставить nullable, чтобы не зависеть от drugset-логики
-    drugset_id = db.Column(db.Integer, nullable=True)
-
+    # активна/закрыта
     is_open = db.Column(db.Boolean, nullable=False, default=True)
+
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # параметры, которые должны жить ВНУТРИ сессии
+    duration = db.Column(db.Integer, nullable=True)          # минуты
+    drugs = db.Column(db.Text, nullable=True)               # JSON (как settings.drugs)
+    indication_key = db.Column(db.String(64), nullable=True)
+    indication_sets = db.Column(db.Text, nullable=True)     # JSON
+    answer_key = db.Column(db.Text, nullable=True)          # JSON (как settings.answer_key)
+
 
 
 class SessionRoster(db.Model):

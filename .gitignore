@@ -19,3 +19,6 @@ Thumbs.db
 # логи
 *.log
 config.diagnose
+
+# VS Code workspace
+*.code-workspace

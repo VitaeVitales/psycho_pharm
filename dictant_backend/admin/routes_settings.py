@@ -286,3 +286,97 @@ def upload_session_roster(session_id: int):
     })
 
 
+@admin_bp.route("/exam_sessions/<int:session_id>/settings", methods=["GET"])
+def get_exam_session_settings(session_id: int):
+    session = ExamSession.query.get(session_id)
+    if session is None:
+        return jsonify({"error": "Session not found"}), 404
+
+    # drugs в БД храним как JSON (ticket либо список строк) — в UI отдаём списком строк
+    drugs_for_ui = []
+    if getattr(session, "drugs", None):
+        try:
+            drugs_raw = json.loads(session.drugs)
+            if isinstance(drugs_raw, list) and drugs_raw and isinstance(drugs_raw[0], dict):
+                drugs_for_ui = [d.get("dictated_ru", "") for d in drugs_raw]
+            elif isinstance(drugs_raw, list):
+                drugs_for_ui = drugs_raw
+        except Exception:
+            drugs_for_ui = []
+
+    data = {
+        "sessionId": session.id,
+        "sessionName": session.session_name,
+        "joinCode": session.join_code,
+        "isOpen": session.is_open,
+        "duration": getattr(session, "duration", None),
+        "drugs": drugs_for_ui,
+        "indicationKey": getattr(session, "indication_key", None),
+        "indicationSets": json.loads(session.indication_sets) if getattr(session, "indication_sets", None) else {},
+    }
+    return jsonify(data)
+
+
+@admin_bp.route("/exam_sessions/<int:session_id>/settings", methods=["POST"])
+def save_exam_session_settings(session_id: int):
+    session = ExamSession.query.get(session_id)
+    if session is None:
+        return jsonify({"error": "Session not found"}), 404
+
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({"error": "Invalid or missing JSON"}), 400
+
+    # Берём answer_key из глобальных Settings (мастер-таблица)
+    settings = Settings.query.first()
+    answer_key = {}
+    if settings and settings.answer_key:
+        try:
+            answer_key = json.loads(settings.answer_key)
+        except Exception:
+            answer_key = {}
+
+    # 1) session_name
+    if "sessionName" in data:
+        session.session_name = (data.get("sessionName") or "").strip() or session.session_name
+
+    # 2) join_code (разрешаем администратору задать вручную)
+    if "joinCode" in data:
+        join_code = (data.get("joinCode") or "").strip()
+        if join_code:
+            session.join_code = join_code
+
+    # 3) duration
+    if "duration" in data:
+        session.duration = data.get("duration")
+
+    # 4) indicationKey / indicationSets
+    if "indicationKey" in data:
+        session.indication_key = data.get("indicationKey")
+
+    if "indicationSets" in data:
+        try:
+            session.indication_sets = json.dumps(data.get("indicationSets") or {}, ensure_ascii=False)
+        except Exception:
+            return jsonify({"error": "Invalid value for indicationSets"}), 400
+
+    # 5) drugs: валидируем и РЕЗОЛВИМ через мастер-таблицу -> ticket
+    if "drugs" in data:
+        drugs_ru = data.get("drugs")
+        ok, msg = _validate_ru_only_list(drugs_ru)
+        if not ok:
+            return jsonify({"error": msg}), 400
+
+        ticket, errors = _resolve_ticket(drugs_ru, answer_key)
+        if errors:
+            return jsonify({
+                "error": "Список препаратов не сохранён: есть проблемы сопоставления",
+                "details": errors
+            }), 400
+
+        session.drugs = json.dumps(ticket, ensure_ascii=False)
+
+    db.session.add(session)
+    db.session.commit()
+
+    return jsonify({"status": "ok"})
