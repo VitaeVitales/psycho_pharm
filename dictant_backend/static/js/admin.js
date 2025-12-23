@@ -12,7 +12,6 @@ function initAdminScreen() {
     INDICATION_SETS,
     generateGeneral,
     loadSettings,
-    saveSettings,
     loadLoginScreen,
   } = app;
 
@@ -43,6 +42,7 @@ function initAdminScreen() {
 
   // --- Exam sessions + roster (NEW) ---
   const examSessionNameInput = document.getElementById("examSessionNameInput");
+  const examSessionJoinCodeInput = document.getElementById("examSessionJoinCodeInput");
   const createExamSessionBtn = document.getElementById("createExamSessionBtn");
   const examSessionsStatus = document.getElementById("examSessionsStatus");
   const examSessionsList = document.getElementById("examSessionsList");
@@ -119,20 +119,17 @@ function initAdminScreen() {
     setSaveError("");
     if (saveStatusEl) saveStatusEl.textContent = "";
 
-    // drugs: строго строки, которые ввёл админ
     let drugs = drugsText
       .split("\n")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    // никаких автозаглушек — иначе бэк справедливо откажет (не найдёт "Препарат 7")
     if (drugs.length === 0) {
       setSaveError("Введите список препаратов (1–10 строк).");
       return;
     }
     if (drugs.length > 10) drugs = drugs.slice(0, 10);
 
-    // базовая валидация "только русский" (бэк тоже валидирует)
     const hasLatin = drugs.some((x) => /[A-Za-z]/.test(x));
     if (hasLatin) {
       setSaveError("Список препаратов должен быть только на русском (без латиницы).");
@@ -149,7 +146,6 @@ function initAdminScreen() {
       indicationKey: indicationKey in INDICATION_SETS ? indicationKey : DEFAULT_SETTINGS.indicationKey,
     };
 
-    // saveSettings() сейчас показывает alert, но нам нужно вытянуть детали -> делаем прямой POST
     try {
       const s = state.currentSettings;
       const payload = {
@@ -179,7 +175,6 @@ function initAdminScreen() {
 
       if (saveStatusEl) saveStatusEl.textContent = "Сохранено";
 
-      // перезагрузка настроек, чтобы UI синхронизировался с БД
       const settings = await loadSettings();
       state.currentSettings = settings;
       generateGeneral();
@@ -200,7 +195,7 @@ function initAdminScreen() {
   });
 
   // ---------------------------
-  // Upload indications (unchanged)
+  // Upload indications
   // ---------------------------
   if (uploadBtn) {
     uploadBtn.addEventListener("click", async () => {
@@ -236,7 +231,7 @@ function initAdminScreen() {
   }
 
   // ---------------------------
-  // Upload master table (FIXED)
+  // Upload master table
   // ---------------------------
   if (answerKeyBtn) {
     answerKeyBtn.addEventListener("click", async () => {
@@ -252,7 +247,6 @@ function initAdminScreen() {
       formData.append("file", file);
 
       try {
-        // ВАЖНО: новый endpoint
         const resp = await fetch(`${API_BASE}/admin/upload_master`, {
           method: "POST",
           body: formData,
@@ -262,7 +256,6 @@ function initAdminScreen() {
 
         if (!resp.ok) {
           if (answerKeyStatus) answerKeyStatus.textContent = data.error || "Ошибка загрузки мастер-таблицы";
-          // часто полезно показать в блоке сохранения тоже
           setSaveError(data.error || "Ошибка загрузки мастер-таблицы");
           return;
         }
@@ -273,7 +266,6 @@ function initAdminScreen() {
           answerKeyStatus.textContent = `Мастер-таблица загружена (loaded: ${loaded}, skipped: ${skipped})`;
         }
 
-        // подтянуть settings (там хранится answer_key)
         state.currentSettings = await loadSettings();
         fillAdminSettings();
       } catch (e) {
@@ -429,36 +421,44 @@ function initAdminScreen() {
     }
   }
 
-  if (createExamSessionBtn) {
+if (createExamSessionBtn) {
     createExamSessionBtn.addEventListener("click", async () => {
-      const name = (examSessionNameInput?.value || "").trim();
-      if (!name) {
-        setExamSessionsStatus("Введите название сессии");
+    const name = (examSessionNameInput?.value || "").trim();
+    const joinCode = (examSessionJoinCodeInput?.value || "").trim();
+
+    if (!name) {
+      setExamSessionsStatus("Введите название сессии");
+      return;
+    }
+
+    // payload: join_code опционален (если пусто — бэк сам сгенерит)
+    const payload = { session_name: name };
+    if (joinCode) payload.join_code = joinCode;
+
+    try {
+      const resp = await fetch(`${API_BASE}/admin/exam_sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setExamSessionsStatus(data.error || "Ошибка создания сессии");
         return;
       }
 
-      try {
-        const resp = await fetch(`${API_BASE}/admin/exam_sessions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_name: name }),
-        });
+      setExamSessionsStatus("Сессия создана");
+      if (examSessionNameInput) examSessionNameInput.value = "";
+      if (examSessionJoinCodeInput) examSessionJoinCodeInput.value = "";
+      await renderExamSessions();
+    } catch (e) {
+      console.error(e);
+      setExamSessionsStatus("Ошибка подключения");
+    }
+  });
+}
 
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) {
-          setExamSessionsStatus(data.error || "Ошибка создания сессии");
-          return;
-        }
-
-        setExamSessionsStatus("Сессия создана");
-        if (examSessionNameInput) examSessionNameInput.value = "";
-        await renderExamSessions();
-      } catch (e) {
-        console.error(e);
-        setExamSessionsStatus("Ошибка подключения");
-      }
-    });
-  }
 
   if (uploadRosterBtn) {
     uploadRosterBtn.addEventListener("click", async () => {
@@ -499,11 +499,9 @@ function initAdminScreen() {
     });
   }
 
-
   // First fill
   fillAdminSettings();
 
   // Make history callable
   window.DictantAppRenderHistory = renderHistory;
 }
-

@@ -81,7 +81,7 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
         active = ActiveSession(
             student_name=student_name,
             group=group,
-            session_name=settings.session_name or "",
+            session_name=settings.session_name,
             start_time=now,
             last_activity=now,
             status="active",
@@ -94,7 +94,8 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
     db.session.commit()
 
     # ticket хранится в settings.drugs как list[dict] [{drug_id, dictated_ru, dictated_kind}]
-    raw = json.loads(settings.drugs) if settings.drugs else []
+    source_drugs_json = session.drugs if session.drugs else settings.drugs
+    raw = json.loads(source_drugs_json) if source_drugs_json else []
     ticket: list = []
     if isinstance(raw, list) and raw:
         if isinstance(raw[0], dict):
@@ -108,14 +109,19 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
     order = _stable_shuffle(n, seed_str) if n > 0 else []
     ticket_shuffled = [ticket[i] for i in order] if n > 0 else []
 
+    duration = session.duration if session.duration is not None else (settings.duration or 0)
+    indication_key = session.indication_key if session.indication_key is not None else settings.indication_key
+
+    ind_sets_json = session.indication_sets if session.indication_sets else settings.indication_sets
+    indication_sets = json.loads(ind_sets_json) if ind_sets_json else {}
+
     response = {
-        "sessionName": settings.session_name,
-        "duration": settings.duration or 0,
-        "indicationKey": settings.indication_key,
-        "indicationSets": json.loads(settings.indication_sets) if settings.indication_sets else {},
-        # НОВОЕ: ticket — правильный формат (с drug_id / dictated_ru / dictated_kind)
+        "examSessionId": session.id,
+        "sessionName": session.session_name,
+        "duration": duration,
+        "indicationKey": indication_key,
+        "indicationSets": indication_sets,
         "ticket": ticket_shuffled,
-        # НОВОЕ: drugs — для обратной совместимости со старым фронтом
         "drugs": [x.get("dictated_ru", "") for x in ticket_shuffled],
     }
 
