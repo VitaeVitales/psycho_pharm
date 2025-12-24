@@ -180,11 +180,14 @@ def close_active_session(student_name: str, session_name: str) -> None:
 def create_submission_record(data: dict, score: float | None, score_details: dict) -> Submission:
     """
     Создаёт запись Submission и сохраняет в БД.
-    """
+    """ 
+    exam_session_id = data.get("examSessionId") or data.get("exam_session_id")
+
     from ..utils.timeparse import parse_iso_time
 
     submission = Submission(
         session_name=data.get("sessionName"),
+        exam_session_id=exam_session_id,
         student_name=data.get("studentName"),
         group=data.get("group"),
         start_time=parse_iso_time(data.get("startTime")),

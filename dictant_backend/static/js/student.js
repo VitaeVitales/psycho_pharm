@@ -426,6 +426,7 @@ function initStudentScreen() {
 
     const payload = {
       sessionName: state.currentSettings.sessionName,
+      examSessionId: window.examSessionId,
       studentName: state.currentStudent.name,
       group: state.currentStudent.group,
       startTime: new Date(examStartTime).toISOString(),
@@ -434,6 +435,7 @@ function initStudentScreen() {
       answers: answers,
       autoSubmitted: auto,
     };
+
 
     try {
       const resp = await fetch(`${API_BASE}/sessions/submit`, {

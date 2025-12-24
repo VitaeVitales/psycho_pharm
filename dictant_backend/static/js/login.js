@@ -138,6 +138,7 @@ function initLoginScreen() {
       }
 
       const data = await resp.json();
+      window.examSessionId = data.examSessionId;
 
       // Обновляем настройки под конкретную сессию
       const currentSettings = state.currentSettings || { ...DEFAULT_SETTINGS };
