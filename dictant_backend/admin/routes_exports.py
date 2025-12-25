@@ -1,13 +1,19 @@
 # dictant_backend/admin/routes_exports.py
 
+from . import admin_bp
 import json
 import csv
 from io import BytesIO, StringIO
+from datetime import datetime
 
-import pandas as pd
+try:
+    import pandas as pd
+except Exception:
+    pd = None
+
 from flask import Blueprint, jsonify, send_file, Response
 
-from ..models import Submission
+from ..models import Submission, Settings
 
 
 admin_exports_bp = Blueprint("admin_exports", __name__, url_prefix="/admin")
@@ -181,3 +187,67 @@ def export_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
+@admin_bp.route("/master_export.json", methods=["GET"])
+def export_master_json():
+    settings = Settings.query.first()
+    if settings is None or not settings.answer_key:
+        return jsonify({"error": "Master table not loaded"}), 400
+
+    try:
+        answer_key = json.loads(settings.answer_key)
+    except Exception as e:
+        return jsonify({"error": f"Failed to parse answer_key JSON: {e}"}), 500
+
+    content = json.dumps(answer_key, ensure_ascii=False, indent=2).encode("utf-8")
+    buf = BytesIO(content)
+    buf.seek(0)
+
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    filename = f"master_{ts}.json"
+
+    return send_file(
+        buf,
+        mimetype="application/json; charset=utf-8",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@admin_bp.route("/master_export.xlsx", methods=["GET"])
+def export_master_xlsx():
+    if pd is None:
+        return jsonify({"error": "pandas is required for xlsx export"}), 500
+
+    settings = Settings.query.first()
+    if settings is None or not settings.answer_key:
+        return jsonify({"error": "Master table not loaded"}), 400
+
+    try:
+        answer_key = json.loads(settings.answer_key)
+    except Exception as e:
+        return jsonify({"error": f"Failed to parse answer_key JSON: {e}"}), 500
+
+    rows = []
+    for drug_id, item in (answer_key or {}).items():
+        if isinstance(item, dict):
+            row = {"drug_id": drug_id, **item}
+        else:
+            row = {"drug_id": drug_id, "value": item}
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+
+    buf = BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="master")
+    buf.seek(0)
+
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    filename = f"master_{ts}.xlsx"
+
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
