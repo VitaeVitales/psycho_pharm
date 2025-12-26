@@ -188,5 +188,87 @@ def upload_master_table():
         "note": "answer_key is keyed by drug_id",
     })
 
+@admin_bp.route("/upload_indication_sets", methods=["POST"])
+def upload_indication_sets():
+    """
+    Загрузка шаблонов показаний (xlsx) -> сохраняем в Settings.indication_sets.
+    Ожидаемый формат таблицы (колонки):
+      - set_key
+      - set_title
+      - indication_key
+      - indication_label
+    """
+    if pd is None:
+        return jsonify({"error": "pandas is required for xlsx uploads"}), 500
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "Empty filename"}), 400
+
+    try:
+        df = pd.read_excel(f)
+    except Exception as e:
+        return jsonify({"error": f"Failed to read Excel: {e}"}), 400
+
+    df.columns = [str(c).strip() for c in df.columns]
+
+    required = {"set_key", "set_title", "indication_key", "indication_label"}
+    missing = required - set(df.columns)
+    if missing:
+        return jsonify({
+            "error": "Missing required columns",
+            "missing": sorted(list(missing)),
+            "required": sorted(list(required)),
+        }), 400
+
+    rows = df.to_dict(orient="records")
+
+    indication_sets: dict[str, dict] = {}
+    skipped = 0
+
+    for row in rows:
+        set_key = str(row.get("set_key", "")).strip()
+        set_title = str(row.get("set_title", "")).strip()
+        ind_key = str(row.get("indication_key", "")).strip()
+        ind_label = str(row.get("indication_label", "")).strip()
+
+        if not set_key or not ind_key or not ind_label:
+            skipped += 1
+            continue
+
+        if set_key not in indication_sets:
+            indication_sets[set_key] = {
+                "title": set_title or set_key,
+                "items": []
+            }
+        else:
+            if set_title and (not indication_sets[set_key].get("title") or indication_sets[set_key]["title"] == set_key):
+                indication_sets[set_key]["title"] = set_title
+
+        items = indication_sets[set_key]["items"]
+        if any(isinstance(x, dict) and x.get("key") == ind_key for x in items):
+            skipped += 1
+            continue
+
+        items.append({"key": ind_key, "label": ind_label})
+
+    settings = Settings.query.first()
+    if settings is None:
+        settings = Settings()
+
+    settings.indication_sets = json.dumps(indication_sets, ensure_ascii=False)
+    db.session.add(settings)
+    db.session.commit()
+
+    return jsonify({
+        "status": "ok",
+        "sets": len(indication_sets),
+        "total_items": sum(len(v.get("items", [])) for v in indication_sets.values()),
+        "skipped": skipped,
+        "note": "Saved to Settings.indication_sets",
+    })
 
 
