@@ -62,16 +62,36 @@
     </div>
 
     <div class="form-row">
-      <label>Загрузить показания из файла
-        <input type="file" id="adminIndicationsFile" accept=".json" />
-      </label>
-      <button type="button" id="adminUploadIndicationsBtn" class="secondary-btn">Загрузить</button>
+      <button type="button" id="adminShowIndicationSetsBtn" class="secondary-btn">
+        Показать загруженные наборы показаний
+      </button>
     </div>
-    <div class="hint">
-      Формат файла: JSON с объектом, где ключи – категории, а значения – массивы показаний.
-      При загрузке текущие показания будут заменены.
-    </div>
+    <div id="adminIndicationSetsBox" class="hint hidden" style="white-space: pre-wrap;"></div>
+
+
+  <label>Загрузить наборы показаний (XLSX)
+    <input type="file" id="adminIndicationsFile" accept=".xlsx,.xls" />
+  </label>
+  <button type="button" id="adminUploadIndicationsBtn" class="secondary-btn">Загрузить</button>
+
+  <div class="hint">
+    Формат файла: Excel (.xlsx) с колонками: set_key, set_title, indication_key, indication_label.
+    При загрузке текущие наборы показаний будут заменены.
+  </div>
+
+
+
     <div id="adminUploadStatus" class="status-text"></div>
+
+    <hr style="margin:12px 0;" />
+
+    <div id="indicationSetsSection">
+      <h3>Загруженные наборы показаний</h3>
+      <div id="indicationSetsList">
+        <em>Наборы не загружены</em>
+      </div>
+    </div>
+
 
     <!-- Загрузка мастер-таблицы (ключа) -->
     <div class="form-row" style="margin-top:10px;">

@@ -31,6 +31,9 @@ function initAdminScreen() {
   const indicationsFileInput = document.getElementById("adminIndicationsFile");
   const uploadStatus = document.getElementById("adminUploadStatus");
 
+  const showIndicationSetsBtn = document.getElementById("adminShowIndicationSetsBtn");
+  const indicationSetsBox = document.getElementById("adminIndicationSetsBox");
+
   const answerKeyInput = document.getElementById("adminAnswerKeyFile");
   const answerKeyBtn = document.getElementById("adminUploadAnswerKeyBtn");
   const answerKeyStatus = document.getElementById("adminAnswerKeyStatus");
@@ -96,6 +99,41 @@ function initAdminScreen() {
     renderHistory();
     renderExamSessions();
   }
+
+  function renderIndicationSetsBox() {
+    const sets = (state.currentSettings?.indicationSets) || (currentSettings?.indicationSets) || {};
+    const keys = Object.keys(sets);
+
+    if (!indicationSetsBox) return;
+
+    if (!keys.length) {
+      indicationSetsBox.textContent = "Наборы показаний не загружены.";
+      indicationSetsBox.classList.remove("hidden");
+      return;
+    }
+
+    let out = "Загруженные наборы показаний:\n\n";
+    for (const k of keys) {
+      const title = sets[k]?.title || k;
+      const count = Array.isArray(sets[k]?.items) ? sets[k].items.length : 0;
+      out += `• ${k} — ${title} (${count})\n`;
+    }
+
+    indicationSetsBox.textContent = out;
+    indicationSetsBox.classList.remove("hidden");
+  }
+
+  if (showIndicationSetsBtn) {
+    showIndicationSetsBtn.addEventListener("click", () => {
+      // toggle
+      if (indicationSetsBox && !indicationSetsBox.classList.contains("hidden")) {
+        indicationSetsBox.classList.add("hidden");
+        return;
+      }
+      renderIndicationSetsBox();
+    });
+  }
+
 
   backFromAdmin.addEventListener("click", () => {
     try {
@@ -177,6 +215,7 @@ function initAdminScreen() {
 
       const settings = await loadSettings();
       state.currentSettings = settings;
+      renderIndicationSets(settings.indicationSets || {});
       generateGeneral();
       renderHistory();
       fillAdminSettings();
@@ -208,7 +247,7 @@ function initAdminScreen() {
       const formData = new FormData();
       formData.append("file", file);
       try {
-        const resp = await fetch(`${API_BASE}/admin/upload_indications`, {
+        const resp = await fetch(`${API_BASE}/admin/upload_indication_sets`, {
           method: "POST",
           body: formData,
         });
