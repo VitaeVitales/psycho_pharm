@@ -22,3 +22,5 @@ config.diagnose
 
 # VS Code workspace
 *.code-workspace
+
+файлы/

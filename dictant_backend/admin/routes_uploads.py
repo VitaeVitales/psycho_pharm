@@ -188,6 +188,12 @@ def upload_master_table():
         "note": "answer_key is keyed by drug_id",
     })
 
+@admin_bp.route("/upload_indications", methods=["POST"])
+def upload_indications():
+    """Backward-compatible alias for older admin UI."""
+    return upload_indication_sets()
+
+
 @admin_bp.route("/upload_indication_sets", methods=["POST"])
 def upload_indication_sets():
     """
