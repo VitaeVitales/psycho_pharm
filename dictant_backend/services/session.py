@@ -81,7 +81,7 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
         active = ActiveSession(
             student_name=student_name,
             group=group,
-            session_name=settings.session_name,
+            session_name=session.session_name,
             start_time=now,
             last_activity=now,
             status="active",
@@ -90,6 +90,7 @@ def start_session(data: dict, socketio: SocketIO) -> tuple[dict, int]:
     else:
         active.status = "active"
         active.last_activity = now
+        active.session_name = session.session_name
 
     db.session.commit()
 

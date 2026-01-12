@@ -263,11 +263,15 @@ def upload_session_roster(session_id: int):
     SessionRoster.query.filter_by(session_id=session.id).delete()
 
     added = 0
+    seen = set()
     for raw in names:
         if not isinstance(raw, str) or not raw.strip():
             continue
 
         key = normalize_name(raw)
+        if key in seen:
+            continue
+        seen.add(key)
 
         db.session.add(SessionRoster(
             session_id=session.id,
