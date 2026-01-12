@@ -126,6 +126,7 @@ def get_settings():
         "drugs": drugs_for_ui,
         "duration": settings.duration,
         "code": settings.code,
+        "hasAnswerKey": bool(settings.answer_key),
         "sessionName": settings.session_name,
         "indicationKey": settings.indication_key,
         "indicationSets": json.loads(settings.indication_sets) if settings.indication_sets else {},
@@ -191,6 +192,7 @@ def save_settings():
     payload = {
         "drugs": data.get("drugs", []),
         "duration": settings.duration,
+        "code": settings.code,
         "sessionName": settings.session_name,
         "indicationKey": settings.indication_key,
         "indicationSets": json.loads(settings.indication_sets) if settings.indication_sets else {},
